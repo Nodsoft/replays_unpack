@@ -3,6 +3,7 @@ import logging
 import pickle
 
 from replay_unpack.core import IBattleController
+from replay_unpack.core.battle_controller import extract_and_refine_vehicle_properties
 from replay_unpack.core.entity import Entity
 from .constants import DamageStatsType, Category, TaskType, Status
 
@@ -81,7 +82,8 @@ class BattleController(IBattleController):
             # planes are only updated in AOI
             # so information is not right
             # planes=self._dead_planes,
-            arena_id=self._arena_id
+            arena_id=self._arena_id,
+            vehicles=extract_and_refine_vehicle_properties(self.entities)
         )
 
     def _getDeathsInfo(self):

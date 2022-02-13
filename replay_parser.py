@@ -1,10 +1,12 @@
 # coding=utf-8
+import sys
 import json
 import logging
 import os
+import typing
 from json import JSONEncoder
 
-from replay_unpack.clients import wot, wows
+from replay_unpack.clients import wows
 from replay_unpack.replay_reader import ReplayReader, ReplayInfo
 
 
@@ -19,10 +21,10 @@ class DefaultEncoder(JSONEncoder):
 class ReplayParser(object):
     BASE_PATH = os.path.dirname(__file__)
 
-    def __init__(self, replay_path, strict: bool = False, raw_data_output=None):
-        self._replay_path = replay_path
+    def __init__(self, binary_replay_data: typing.IO, strict: bool = False, raw_data_output=None):
+        self._binary_replay_data = binary_replay_data
         self._is_strict_mode = strict
-        self._reader = ReplayReader(replay_path)
+        self._reader = ReplayReader(binary_replay_data)
         self._raw_data_output = raw_data_output
 
     def get_info(self):
@@ -49,21 +51,10 @@ class ReplayParser(object):
         )
 
     def _get_hidden_data(self, replay: ReplayInfo):
-        if replay.game == 'wot':
-            # 'World of Tanks v.1.8.0.2 #252'
-            version = '.'.join(replay.engine_data.get('clientVersionFromXml')
-                               .replace('World of Tanks v.', '')
-                               .replace(' ', '.')
-                               .replace('#', '')
-                               .split('.')[:3])
-            player = wot.ReplayPlayer(version)
-        elif replay.game == 'wows':
-            player = wows.ReplayPlayer(replay.engine_data
-                                       .get('clientVersionFromXml')
-                                       .replace(' ', '')
-                                       .split(','))
-        else:
-            raise NotImplementedError
+        player = wows.ReplayPlayer(replay.engine_data
+                                   .get('clientVersionFromXml')
+                                   .replace(' ', '')
+                                   .split(','))
 
         if self._raw_data_output:
             with open(self._raw_data_output, 'wb') as f:
@@ -77,7 +68,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--replay', type=str, required=True)
+    parser.add_argument('--replay', type=str, required=False)
     parser.add_argument(
         '--log_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
@@ -97,9 +88,13 @@ if __name__ == '__main__':
     )
 
     namespace = parser.parse_args()
+    if namespace.replay is None:
+        replay_data = sys.stdin.buffer
+    else:
+        replay_data = open(namespace.replay, 'rb')
     logging.basicConfig(
         level=getattr(logging, namespace.log_level))
     replay_info = ReplayParser(
-        namespace.replay, strict=namespace.strict_mode,
+        replay_data, strict=namespace.strict_mode,
         raw_data_output=namespace.raw_data_output).get_info()
     print(json.dumps(replay_info, indent=1, cls=DefaultEncoder))

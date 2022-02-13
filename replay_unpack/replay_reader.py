@@ -2,6 +2,7 @@
 import json
 import os
 import struct
+import typing
 import zlib
 from io import BytesIO
 from typing import NamedTuple
@@ -57,15 +58,9 @@ class ReplayReader(object):
     See http://wiki.vbaddict.net/pages/File_Replays for more details;
     """
 
-    def __init__(self, replay_path, dump_binary=False):
+    def __init__(self, replay_data: typing.IO, dump_binary=False):
         self._dump_binary_data = dump_binary
-        self._replay_path = replay_path
-        self._check_replay_exists()
-
-        self._type = self._replay_path.rsplit('.', 1)[-1]
-        if self._type not in ALLOWED_TYPES:
-            raise ValueError("Replay must be in following extensions: "
-                             "%s" % ALLOWED_TYPES)
+        self._replay_data = replay_data
 
     def get_replay_data(self) -> ReplayInfo:
         """
@@ -75,60 +70,29 @@ class ReplayReader(object):
         (after decrypt & decompress);
         :rtype: tuple[dict, str]
         """
-        with open(self._replay_path, 'rb') as f:
-            if f.read(4) != REPLAY_SIGNATURE:
-                raise ValueError("File %s is not a valid replay" % self._replay_path)
+        if self._replay_data.read(4) != REPLAY_SIGNATURE:
+            raise ValueError("File %s is not a valid replay")
 
-            blocks_count = struct.unpack("i", f.read(4))[0]
+        blocks_count = struct.unpack("i", self._replay_data.read(4))[0]
 
-            block_size = struct.unpack("i", f.read(4))[0]
-            engine_data = json.loads(f.read(block_size))
+        block_size = struct.unpack("i", self._replay_data.read(4))[0]
+        engine_data = json.loads(self._replay_data.read(block_size))
 
-            extra_data = []
-            for i in range(blocks_count - 1):
-                block_size = struct.unpack("i", f.read(4))[0]
-                data = json.loads(f.read(block_size))
-                extra_data.append(data)
+        extra_data = []
+        for i in range(blocks_count - 1):
+            block_size = struct.unpack("i", self._replay_data.read(4))[0]
+            data = json.loads(self._replay_data.read(block_size))
+            extra_data.append(data)
 
-            if self._type == WOWS_REPLAY:
-                game = 'wows'
-            elif self._type == WOT_REPLAY:
-                game = 'wot'
-            else:
-                raise
-            decrypted_data = zlib.decompress(self.__decrypt_data(f.read()))
+        game = 'wows'
+        decrypted_data = zlib.decompress(self.__decrypt_data(self._replay_data.read()))
 
-            if self._dump_binary_data:
-                self._save_decrypted_data(decrypted_data)
-
-            return ReplayInfo(
-                game=game,
-                engine_data=engine_data,
-                extra_data=extra_data,
-                decrypted_data=decrypted_data,
-            )
-
-    def _save_decrypted_data(self, decrypted_data):
-        """
-        Save decrypted data into file named as 
-        given replay, but with '.hex' postfix;
-        :type decrypted_data: bytes
-        :raises ParserException
-        """
-        try:
-            replay_name = os.path.basename(self._replay_path)
-            with open('{}.hex'.format(replay_name), 'wb') as df:
-                df.write(decrypted_data)
-        except IOError as e:
-            print('Cannot dump replay: {}'.format(e))
-
-    def _check_replay_exists(self):
-        """
-        Check if replay really exists. 
-        Raises ParserException otherwise. 
-        """
-        if not os.path.exists(self._replay_path):
-            raise Exception("File does not exists: {}".format(self._replay_path))
+        return ReplayInfo(
+            game=game,
+            engine_data=engine_data,
+            extra_data=extra_data,
+            decrypted_data=decrypted_data,
+        )
 
     @staticmethod
     def __chunkify_string(string, length=8):
@@ -143,7 +107,7 @@ class ReplayReader(object):
 
     def __decrypt_data(self, dirty_data):
         previous_block = None  # type: str
-        blowfish = Blowfish.new(TYPE_TO_KEY[self._type], Blowfish.MODE_ECB)
+        blowfish = Blowfish.new(WOWS_BLOWFISH_KEY, Blowfish.MODE_ECB)
         decrypted_data = BytesIO()
 
         for index, chunk in self.__chunkify_string(dirty_data):
