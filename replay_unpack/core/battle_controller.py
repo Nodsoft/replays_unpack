@@ -6,7 +6,7 @@ from typing import Dict
 from replay_unpack.core.entity import Entity
 
 
-def cleanup_vehicle_properties(raw_properties: dict[str, dict]) -> dict[str, dict]:
+def cleanup_vehicle_properties(raw_properties: Dict[str, dict]) -> Dict[str, dict]:
     refined_properties = dict()
     for main_key, main_val in raw_properties.items():
         refined_child_properties = dict()
@@ -20,7 +20,7 @@ def cleanup_vehicle_properties(raw_properties: dict[str, dict]) -> dict[str, dic
     return refined_properties
 
 
-def extract_and_refine_vehicle_properties(entities: dict[int, Entity]) -> dict[int, dict[str, dict]]:
+def extract_and_refine_vehicle_properties(entities: Dict[int, Entity]) -> Dict[int, Dict[str, dict]]:
     vehicles = dict()
     for entity in entities.values():
         if entity.get_name() == "Vehicle":
