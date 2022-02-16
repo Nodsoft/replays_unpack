@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import os
+import time
 import typing
 from json import JSONEncoder
 
@@ -65,6 +66,7 @@ class ReplayParser(object):
 
 
 if __name__ == '__main__':
+    start = time.time()
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -98,3 +100,5 @@ if __name__ == '__main__':
         replay_data, strict=namespace.strict_mode,
         raw_data_output=namespace.raw_data_output).get_info()
     print(json.dumps(replay_info, indent=1, cls=DefaultEncoder))
+    end = time.time()
+    print("Total duration: " + str(end - start))

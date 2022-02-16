@@ -2,6 +2,7 @@
 import json
 import os
 import struct
+import time
 import typing
 import zlib
 from io import BytesIO
@@ -85,7 +86,10 @@ class ReplayReader(object):
             extra_data.append(data)
 
         game = 'wows'
+        start = time.time()
         decrypted_data = zlib.decompress(self.__decrypt_data(self._replay_data.read()))
+        end = time.time()
+        print("Decryption: " + str(end - start))
 
         return ReplayInfo(
             game=game,

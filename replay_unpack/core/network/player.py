@@ -4,16 +4,18 @@ import logging
 from abc import ABC
 from io import BytesIO
 
+from typing import List
+
 from .net_packet import NetPacket
 
 
 class PlayerBase:
-    def __init__(self, version: str):
+    def __init__(self, version: List[str]):
         self._definitions = self._get_definitions(version)
 
         self._mapping = self._get_packets_mapping()
 
-    def _get_definitions(self, version):
+    def _get_definitions(self, version: List[str]):
         raise NotImplementedError
 
     def _get_packets_mapping(self):
@@ -42,12 +44,12 @@ class PlayerBase:
 
 
 class ControlledPlayerBase(PlayerBase, ABC):
-    def __init__(self, version: str):
+    def __init__(self, version: List[str]):
         self._battle_controller = self._get_controller(version)
 
         super(ControlledPlayerBase, self).__init__(version)
 
-    def _get_controller(self, version):
+    def _get_controller(self, version: List[str]):
         raise NotImplementedError
 
     def get_info(self):

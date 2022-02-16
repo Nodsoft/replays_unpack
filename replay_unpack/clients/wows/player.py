@@ -2,6 +2,7 @@
 import logging
 import struct
 from io import BytesIO
+from typing import List
 
 from replay_unpack.core import (
     Entity
@@ -26,13 +27,13 @@ from .network.packets import (
 
 class ReplayPlayer(ControlledPlayerBase):
 
-    def _get_definitions(self, version):
+    def _get_definitions(self, version: List[str]):
         try:
             return get_definitions('_'.join(version[:4]))
         except RuntimeError:
             return get_definitions('_'.join(version[:3]))
 
-    def _get_controller(self, version):
+    def _get_controller(self, version: List[str]):
         try:
             return get_controller('_'.join(version[:4]))
         except RuntimeError:
